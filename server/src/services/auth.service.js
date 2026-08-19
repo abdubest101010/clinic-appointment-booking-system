@@ -1,28 +1,51 @@
 const bcrypt = require('bcryptjs');
-const { pool } = require('../config/db');
+const { prisma } = require('../config/prisma');
 
-// All DB access lives in services so controllers stay thin and reusable.
+// All data access goes through Prisma. Outputs are mapped to snake_case DTOs
+// so the API contract (and the frontend) stays stable regardless of the DB.
 
 async function findByEmail(email) {
-  const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
-  return rows[0] || null;
+  const u = await prisma.user.findUnique({ where: { email } });
+  if (!u) return null;
+  return {
+    id: u.id,
+    full_name: u.fullName,
+    email: u.email,
+    password_hash: u.passwordHash,
+    role: u.role,
+    phone: u.phone,
+  };
 }
 
 async function findById(id) {
-  const [rows] = await pool.query(
-    'SELECT id, full_name, email, role, phone, created_at FROM users WHERE id = ?',
-    [id]
-  );
-  return rows[0] || null;
+  const u = await prisma.user.findUnique({
+    where: { id },
+    select: { id: true, fullName: true, email: true, role: true, phone: true, createdAt: true },
+  });
+  if (!u) return null;
+  return {
+    id: u.id,
+    full_name: u.fullName,
+    email: u.email,
+    role: u.role,
+    phone: u.phone,
+    created_at: u.createdAt,
+  };
 }
 
 async function createUser({ full_name, email, password, role = 'patient', phone = null }) {
-  const password_hash = await bcrypt.hash(password, 10);
-  const [result] = await pool.query(
-    'INSERT INTO users (full_name, email, password_hash, role, phone) VALUES (?, ?, ?, ?, ?)',
-    [full_name, email, password_hash, role, phone]
-  );
-  return { id: result.insertId, full_name, email, role, phone };
+  const passwordHash = await bcrypt.hash(password, 10);
+  const u = await prisma.user.create({
+    data: { fullName: full_name, email, passwordHash, role, phone },
+    select: { id: true, fullName: true, email: true, role: true, phone: true },
+  });
+  return {
+    id: u.id,
+    full_name: u.fullName,
+    email: u.email,
+    role: u.role,
+    phone: u.phone,
+  };
 }
 
 async function verifyPassword(plain, hash) {

@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const config = require('./config/env');
-const { testConnection } = require('./config/db');
+const { prisma } = require('./config/prisma');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
 
 const authRoutes = require('./routes/auth.routes');
@@ -28,7 +28,8 @@ app.use(errorHandler);
 
 async function start() {
   try {
-    await testConnection();
+    await prisma.$connect();
+    console.log('[db] Connected to MySQL via Prisma.');
     app.listen(config.port, () => {
       console.log(`[server] Clinic Booking API listening on http://localhost:${config.port}`);
     });

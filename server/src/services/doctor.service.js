@@ -1,22 +1,39 @@
-const { pool } = require('../config/db');
+const { prisma } = require('../config/prisma');
 
-// Doctors are users with role 'doctor' joined to the doctors profile table.
+// Doctors are users with role 'doctor' linked to a doctor profile.
 
 async function listActiveDoctors() {
-  const [rows] = await pool.query(
-    `SELECT d.id AS doctor_id, d.specialty, d.bio, d.is_active,
-            u.id AS user_id, u.full_name, u.email
-     FROM doctors d
-     JOIN users u ON u.id = d.user_id
-     WHERE d.is_active = TRUE
-     ORDER BY u.full_name ASC`
-  );
-  return rows;
+  const doctors = await prisma.doctor.findMany({
+    where: { isActive: true },
+    orderBy: { user: { fullName: 'asc' } },
+    include: { user: { select: { id: true, fullName: true, email: true } } },
+  });
+
+  return doctors.map((d) => ({
+    doctor_id: d.id,
+    specialty: d.specialty,
+    bio: d.bio,
+    is_active: d.isActive,
+    user_id: d.userId,
+    full_name: d.user.fullName,
+    email: d.user.email,
+  }));
 }
 
 async function findDoctorById(doctorId) {
-  const [rows] = await pool.query('SELECT id FROM doctors WHERE id = ? AND is_active = TRUE', [doctorId]);
-  return rows[0] || null;
+  const d = await prisma.doctor.findFirst({
+    where: { id: doctorId, isActive: true },
+    select: { id: true },
+  });
+  return d || null;
 }
 
-module.exports = { listActiveDoctors, findDoctorById };
+async function findDoctorByUserId(userId) {
+  const d = await prisma.doctor.findFirst({
+    where: { userId, isActive: true },
+    select: { id: true },
+  });
+  return d || null;
+}
+
+module.exports = { listActiveDoctors, findDoctorById, findDoctorByUserId };

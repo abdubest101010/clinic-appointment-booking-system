@@ -34,7 +34,7 @@ Small clinics often rely on phone calls or paper logs to schedule appointments, 
 |-----------|------------|
 | Frontend  | Next.js 14 (App Router), React 18, Tailwind CSS |
 | Backend   | Node.js, Express.js |
-| Database  | MySQL 8 (via `mysql2` pool) |
+| Database  | MySQL 8 via **Prisma ORM** (`@prisma/client`) |
 | Auth      | JSON Web Tokens (`jsonwebtoken`), `bcryptjs` |
 | Validation| `express-validator` |
 
@@ -68,9 +68,9 @@ clinic-booking/
 
 **Key design decisions**
 
-- **Layered backend**: routes → controllers → services. Controllers handle HTTP/permissions; services own all SQL. This keeps logic testable and reusable.
+- **Layered backend**: routes → controllers → services. Controllers handle HTTP/permissions; services own all **Prisma** data access. This keeps logic testable and reusable.
 - **Single source of truth for auth**: `authenticate` validates the JWT and sets `req.user`; `authorize(...roles)` enforces role; ownership is checked inside controllers (e.g. a patient can only cancel *their* appointment).
-- **Parameterized queries everywhere** to prevent SQL injection.
+- **Parameterized queries everywhere** — Prisma generates safe, parameterized SQL from the `schema.prisma` model, eliminating SQL injection by design.
 - **Frontend talks only to the API** — no mock data. `AuthContext` stores the JWT in `localStorage` and the API client attaches it as a Bearer token.
 - **Protected routes** (`ProtectedRoute`) guard pages client-side and the API guards them server-side (defense in depth).
 
@@ -88,19 +88,22 @@ Relationships: a patient (user) books an appointment with a doctor (profile); an
 - Node.js 18+
 - MySQL 8 (e.g. [MySQL Community Server](https://dev.mysql.com/downloads/) or XAMPP)
 
-### Database
+### Database (Prisma)
 ```bash
-# 1. Start MySQL, then create the database and tables:
-mysql -u root -p < database/schema.sql
-
-# 2. (Optional) add a sample appointment:
-mysql -u root -p clinic_booking < database/seed.sql
+cd server
+cp .env.example .env        # set DATABASE_URL to your MySQL instance
+npm install
+npm run prisma:migrate     # creates migrations + applies them + generates Prisma Client
 ```
+
+The schema lives in `server/prisma/schema.prisma` (models: `User`, `Doctor`, `Appointment`,
+plus `Role` and `AppointmentStatus` enums). Prisma manages the MySQL schema — no raw `.sql`
+files are used. (Dev shortcut: `npm run prisma:push` applies the schema without migrations.)
 
 ### Backend
 ```bash
 cd server
-cp .env.example .env        # then edit DB_* and JWT_SECRET
+cp .env.example .env        # set DATABASE_URL + JWT_SECRET
 npm install
 npm run seed                # creates demo users + doctors + 1 appointment
 npm run dev                 # http://localhost:4000
@@ -129,11 +132,8 @@ You can also register a new patient from the UI.
 **server/.env**
 ```
 PORT=4000
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=your_mysql_password
-DB_NAME=clinic_booking
+# Prisma connection string (MySQL)
+DATABASE_URL="mysql://root:your_mysql_password@127.0.0.1:3306/clinic_booking"
 JWT_SECRET=long_random_string
 JWT_EXPIRES_IN=7d
 ```

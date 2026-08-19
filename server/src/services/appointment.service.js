@@ -1,106 +1,92 @@
-const { pool } = require('../config/db');
+const { prisma } = require('../config/prisma');
 
-// Appointment service: all reads/writes for the appointments table.
+// Appointment data access via Prisma. Results are serialized to a flat
+// snake_case shape so the frontend contract is preserved.
 
-async function findDoctorByUserId(userId) {
-  const [rows] = await pool.query(
-    'SELECT id FROM doctors WHERE user_id = ? AND is_active = TRUE',
-    [userId]
-  );
-  return rows[0] || null;
+const include = {
+  patient: { select: { id: true, fullName: true } },
+  doctor: { include: { user: { select: { id: true, fullName: true } } } },
+};
+
+function serialize(a) {
+  return {
+    id: a.id,
+    appointment_at: a.appointmentAt,
+    reason: a.reason,
+    status: a.status,
+    notes: a.notes,
+    created_at: a.createdAt,
+    patient_id: a.patientId,
+    patient_name: a.patient ? a.patient.fullName : null,
+    doctor_id: a.doctorId,
+    doctor_name: a.doctor ? a.doctor.user.fullName : null,
+    specialty: a.doctor ? a.doctor.specialty : null,
+  };
 }
 
-// Check for a conflicting appointment for the same doctor at the same time slot.
 async function hasConflict(doctorId, appointmentAt, excludeId = null) {
-  let sql =
-    'SELECT id FROM appointments WHERE doctor_id = ? AND appointment_at = ? AND status != ?';
-  const params = [doctorId, appointmentAt, 'cancelled'];
-  if (excludeId) {
-    sql += ' AND id != ?';
-    params.push(excludeId);
-  }
-  const [rows] = await pool.query(sql, params);
-  return rows.length > 0;
+  const where = {
+    doctorId,
+    appointmentAt,
+    status: { not: 'cancelled' },
+  };
+  if (excludeId) where.id = { not: excludeId };
+  const found = await prisma.appointment.findFirst({ where });
+  return !!found;
 }
 
 async function createAppointment({ patientId, doctorId, appointmentAt, reason }) {
-  const [result] = await pool.query(
-    `INSERT INTO appointments (patient_id, doctor_id, appointment_at, reason)
-     VALUES (?, ?, ?, ?)`,
-    [patientId, doctorId, appointmentAt, reason]
-  );
-  return getAppointmentById(result.insertId);
+  const created = await prisma.appointment.create({
+    data: { patientId, doctorId, appointmentAt: new Date(appointmentAt), reason },
+    include,
+  });
+  return serialize(created);
 }
 
 async function getAppointmentById(id) {
-  const [rows] = await pool.query(
-    `SELECT a.id, a.appointment_at, a.reason, a.status, a.notes, a.created_at,
-            p.id AS patient_id, p.full_name AS patient_name,
-            d.id AS doctor_id, du.full_name AS doctor_name, d.specialty
-     FROM appointments a
-     JOIN users p ON p.id = a.patient_id
-     JOIN doctors d ON d.id = a.doctor_id
-     JOIN users du ON du.id = d.user_id
-     WHERE a.id = ?`,
-    [id]
-  );
-  return rows[0] || null;
+  const a = await prisma.appointment.findUnique({ where: { id }, include });
+  return a ? serialize(a) : null;
 }
 
 async function listAppointmentsForPatient(patientId) {
-  const [rows] = await pool.query(
-    `SELECT a.id, a.appointment_at, a.reason, a.status, a.notes, a.created_at,
-            d.id AS doctor_id, du.full_name AS doctor_name, d.specialty
-     FROM appointments a
-     JOIN doctors d ON d.id = a.doctor_id
-     JOIN users du ON du.id = d.user_id
-     WHERE a.patient_id = ?
-     ORDER BY a.appointment_at DESC`,
-    [patientId]
-  );
-  return rows;
+  const rows = await prisma.appointment.findMany({
+    where: { patientId },
+    orderBy: { appointmentAt: 'desc' },
+    include,
+  });
+  return rows.map(serialize);
 }
 
 async function listAppointmentsForDoctor(doctorId) {
-  const [rows] = await pool.query(
-    `SELECT a.id, a.appointment_at, a.reason, a.status, a.notes, a.created_at,
-            p.id AS patient_id, p.full_name AS patient_name
-     FROM appointments a
-     JOIN users p ON p.id = a.patient_id
-     WHERE a.doctor_id = ?
-     ORDER BY a.appointment_at DESC`,
-    [doctorId]
-  );
-  return rows;
+  const rows = await prisma.appointment.findMany({
+    where: { doctorId },
+    orderBy: { appointmentAt: 'desc' },
+    include,
+  });
+  return rows.map(serialize);
 }
 
 async function listAllAppointments() {
-  const [rows] = await pool.query(
-    `SELECT a.id, a.appointment_at, a.reason, a.status, a.created_at,
-            p.full_name AS patient_name, du.full_name AS doctor_name, d.specialty
-     FROM appointments a
-     JOIN users p ON p.id = a.patient_id
-     JOIN doctors d ON d.id = a.doctor_id
-     JOIN users du ON du.id = d.user_id
-     ORDER BY a.appointment_at DESC`
-  );
-  return rows;
+  const rows = await prisma.appointment.findMany({
+    orderBy: { appointmentAt: 'desc' },
+    include,
+  });
+  return rows.map(serialize);
 }
 
 async function updateStatus(id, status, notes = null) {
-  await pool.query(
-    'UPDATE appointments SET status = ?, notes = COALESCE(?, notes) WHERE id = ?',
-    [status, notes, id]
-  );
+  await prisma.appointment.update({
+    where: { id },
+    data: { status, ...(notes !== null ? { notes } : {}) },
+  });
   return getAppointmentById(id);
 }
 
 async function remove(id) {
-  await pool.query('DELETE FROM appointments WHERE id = ?', [id]);
+  await prisma.appointment.delete({ where: { id } });
 }
 
 module.exports = {
-  findDoctorByUserId,
   hasConflict,
   createAppointment,
   getAppointmentById,
