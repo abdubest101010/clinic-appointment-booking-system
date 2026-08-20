@@ -97,21 +97,36 @@ export default function AppointmentList({ refreshKey = 0 }) {
           </div>
 
           <div className="mt-3 flex flex-wrap gap-2">
-            {user.role === 'patient' && a.status !== 'cancelled' && a.status !== 'completed' && (
+            {/* Patient: cancel a pending/confirmed appointment (stored as cancelled) */}
+            {user.role === 'patient' && (a.status === 'pending' || a.status === 'confirmed') && (
               <button className="btn-outline" onClick={() => act(`/appointments/${a.id}/cancel`, 'patch')}>
                 Cancel
               </button>
             )}
+
+            {/* Doctor: confirm a pending one, complete a confirmed one, and cancel either */}
             {user.role === 'doctor' && a.status === 'pending' && (
-              <button className="btn" onClick={() => act(`/appointments/${a.id}/status`, 'patch', { status: 'confirmed' })}>
-                Confirm
-              </button>
+              <>
+                <button className="btn" onClick={() => act(`/appointments/${a.id}/status`, 'patch', { status: 'confirmed' })}>
+                  Confirm
+                </button>
+                <button className="btn-outline" onClick={() => act(`/appointments/${a.id}/cancel`, 'patch')}>
+                  Cancel
+                </button>
+              </>
             )}
             {user.role === 'doctor' && a.status === 'confirmed' && (
-              <button className="btn" onClick={() => act(`/appointments/${a.id}/status`, 'patch', { status: 'completed' })}>
-                Complete
-              </button>
+              <>
+                <button className="btn" onClick={() => act(`/appointments/${a.id}/status`, 'patch', { status: 'completed' })}>
+                  Complete
+                </button>
+                <button className="btn-outline" onClick={() => act(`/appointments/${a.id}/cancel`, 'patch')}>
+                  Cancel
+                </button>
+              </>
             )}
+
+            {/* Admin keeps a hard delete (demonstrates CRUD) */}
             {user.role === 'admin' && (
               <button className="btn-outline" onClick={() => act(`/appointments/${a.id}`, 'del')}>
                 Delete
