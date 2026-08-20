@@ -1,7 +1,7 @@
 {
   "name": "clinic-booking-server",
   "version": "1.0.0",
-  "description": "Express API for the Clinic Appointment Booking System (Prisma + MySQL)",
+  "description": "Express API for the Clinic Appointment Booking System (Prisma + PostgreSQL)",
   "type": "commonjs",
   "main": "src/index.js",
   "scripts": {

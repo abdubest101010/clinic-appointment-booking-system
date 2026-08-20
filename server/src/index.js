@@ -29,7 +29,7 @@ app.use(errorHandler);
 async function start() {
   try {
     await prisma.$connect();
-    console.log('[db] Connected to MySQL via Prisma.');
+    console.log('[db] Connected to PostgreSQL via Prisma.');
     app.listen(config.port, () => {
       console.log(`[server] Clinic Booking API listening on http://localhost:${config.port}`);
     });
