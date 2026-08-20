@@ -1,4 +1,5 @@
 const appointmentService = require('../services/appointment.service');
+const doctorService = require('../services/doctor.service');
 const { ok, created, error } = require('../utils/response');
 const asyncHandler = require('../utils/asyncHandler');
 
@@ -11,7 +12,7 @@ const createAppointment = asyncHandler(async (req, res) => {
   const { doctor_id, appointment_at, reason } = req.body;
   const patientId = req.user.id;
 
-  const doctor = await appointmentService.findDoctorById(doctor_id);
+  const doctor = await doctorService.findDoctorById(doctor_id);
   if (!doctor) return error(res, 404, 'Doctor not found.');
 
   const conflict = await appointmentService.hasConflict(doctor_id, appointment_at);
