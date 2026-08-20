@@ -18,6 +18,7 @@ function AdminInner() {
   const [regError, setRegError] = useState('');
   const [regSuccess, setRegSuccess] = useState('');
   const [regLoading, setRegLoading] = useState(false);
+  const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
     Promise.all([api.get('/doctors'), api.get('/appointments')])
@@ -48,6 +49,7 @@ function AdminInner() {
       await api.post('/doctors', form);
       setRegSuccess(`Doctor ${form.full_name} registered.`);
       setForm({ full_name: '', email: '', password: '', specialty: '', bio: '' });
+      setShowForm(false);          // hide the form again
       setRefreshKey((k) => k + 1); // reload doctor list
     } catch (err) {
       setRegError(err.message + (err.details ? ` (${err.details[0]?.message})` : ''));
@@ -80,47 +82,54 @@ function AdminInner() {
       </section>
 
       <section className="mt-6">
-        <h2 className="mb-2 text-lg font-medium text-slate-700">Register a doctor</h2>
-        <div className="card">
-          <Alert message={regError} />
-          {regSuccess && <Alert type="success" message={regSuccess} />}
-          <form onSubmit={handleRegisterDoctor} className="mt-3 grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-sm font-medium">Full name</label>
-              <input className="input" value={form.full_name} required
-                onChange={(e) => update('full_name', e.target.value)} />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">Email</label>
-              <input className="input" type="email" value={form.email} required
-                onChange={(e) => update('email', e.target.value)} />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">Password</label>
-              <input className="input" type="password" value={form.password} required minLength={8}
-                onChange={(e) => update('password', e.target.value)} placeholder="Min 8 chars, 1 number, 1 uppercase" />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">Specialty</label>
-              <input className="input" value={form.specialty} required
-                onChange={(e) => update('specialty', e.target.value)} placeholder="e.g. Cardiology" />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-sm font-medium">Bio (optional)</label>
-              <textarea className="input" rows={2} value={form.bio}
-                onChange={(e) => update('bio', e.target.value)} />
-            </div>
-            <div className="sm:col-span-2">
-              <button className="btn" disabled={regLoading}>
-                {regLoading ? 'Registering…' : 'Register doctor'}
-              </button>
-            </div>
-          </form>
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-lg font-medium text-slate-700">Doctors ({doctors.length})</h2>
+          <button className="btn" onClick={() => setShowForm((s) => !s)}>
+            {showForm ? 'Close' : 'Register a doctor'}
+          </button>
         </div>
+
+        {showForm && (
+          <div className="card">
+            <Alert message={regError} />
+            {regSuccess && <Alert type="success" message={regSuccess} />}
+            <form onSubmit={handleRegisterDoctor} className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-sm font-medium">Full name</label>
+                <input className="input" value={form.full_name} required
+                  onChange={(e) => update('full_name', e.target.value)} />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">Email</label>
+                <input className="input" type="email" value={form.email} required
+                  onChange={(e) => update('email', e.target.value)} />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">Password</label>
+                <input className="input" type="password" value={form.password} required minLength={8}
+                  onChange={(e) => update('password', e.target.value)} placeholder="Min 8 chars, 1 number, 1 uppercase" />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">Specialty</label>
+                <input className="input" value={form.specialty} required
+                  onChange={(e) => update('specialty', e.target.value)} placeholder="e.g. Cardiology" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-sm font-medium">Bio (optional)</label>
+                <textarea className="input" rows={2} value={form.bio}
+                  onChange={(e) => update('bio', e.target.value)} />
+              </div>
+              <div className="sm:col-span-2">
+                <button className="btn" disabled={regLoading}>
+                  {regLoading ? 'Registering…' : 'Register doctor'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
       </section>
 
-      <section className="mt-6">
-        <h2 className="mb-2 text-lg font-medium text-slate-700">Doctors ({doctors.length})</h2>
+      <section className="mt-4">
         <div className="grid gap-3 sm:grid-cols-2">
           {doctors.map((d) => (
             <div key={d.doctor_id} className="card">
