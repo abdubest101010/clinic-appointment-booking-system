@@ -11,16 +11,17 @@ const createAppointment = asyncHandler(async (req, res) => {
 
   const { doctor_id, appointment_at, reason } = req.body;
   const patientId = req.user.id;
+  const doctorId = Number(doctor_id);
 
-  const doctor = await doctorService.findDoctorById(doctor_id);
+  const doctor = await doctorService.findDoctorById(doctorId);
   if (!doctor) return error(res, 404, 'Doctor not found.');
 
-  const conflict = await appointmentService.hasConflict(doctor_id, appointment_at);
+  const conflict = await appointmentService.hasConflict(doctorId, appointment_at);
   if (conflict) return error(res, 409, 'This doctor already has an appointment at that time.');
 
   const appointment = await appointmentService.createAppointment({
     patientId,
-    doctorId: doctor_id,
+    doctorId,
     appointmentAt: appointment_at,
     reason,
   });
@@ -45,7 +46,7 @@ const listAppointments = asyncHandler(async (req, res) => {
 
 // UPDATE status — doctor who owns the appointment, or admin.
 const updateStatus = asyncHandler(async (req, res) => {
-  const { id } = req.params;
+  const id = Number(req.params.id);
   const { status, notes } = req.body;
 
   const appointment = await appointmentService.getAppointmentById(id);
@@ -66,7 +67,7 @@ const updateStatus = asyncHandler(async (req, res) => {
 
 // CANCEL — patient owner, doctor owner, or admin.
 const cancelAppointment = asyncHandler(async (req, res) => {
-  const { id } = req.params;
+  const id = Number(req.params.id);
 
   const appointment = await appointmentService.getAppointmentById(id);
   if (!appointment) return error(res, 404, 'Appointment not found.');
@@ -87,7 +88,7 @@ const cancelAppointment = asyncHandler(async (req, res) => {
 
 // DELETE — admin only (hard delete).
 const deleteAppointment = asyncHandler(async (req, res) => {
-  const { id } = req.params;
+  const id = Number(req.params.id);
   const appointment = await appointmentService.getAppointmentById(id);
   if (!appointment) return error(res, 404, 'Appointment not found.');
 
