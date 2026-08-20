@@ -32,4 +32,16 @@ const registerDoctorValidator = [
   body('bio').optional().isString(),
 ];
 
-module.exports = { registerValidator, loginValidator, registerDoctorValidator };
+const updateProfileValidator = [
+  body('full_name').optional().trim().notEmpty().withMessage('Full name cannot be empty').isLength({ max: 120 }),
+  body('email').optional().trim().isEmail().withMessage('A valid email is required').normalizeEmail(),
+  body('phone').optional({ nullable: true }).isString(),
+  body('password')
+    .optional()
+    .isLength({ min: 8 })
+    .withMessage('Password must be at least 8 characters')
+    .matches(/[A-Z]/).withMessage('Password needs an uppercase letter')
+    .matches(/[0-9]/).withMessage('Password needs a number'),
+];
+
+module.exports = { registerValidator, loginValidator, registerDoctorValidator, updateProfileValidator };

@@ -52,4 +52,37 @@ async function verifyPassword(plain, hash) {
   return bcrypt.compare(plain, hash);
 }
 
-module.exports = { findByEmail, findById, createUser, verifyPassword };
+// Update the current user's own profile. Password is optional; when provided
+// it is hashed. Throws 'EMAIL_EXISTS' if the new email is taken by someone else.
+async function updateProfile(id, { full_name, email, phone, password }) {
+  const data = {};
+  if (full_name !== undefined) data.fullName = full_name;
+  if (phone !== undefined) data.phone = phone;
+  if (email !== undefined) {
+    const other = await prisma.user.findUnique({ where: { email } });
+    if (other && other.id !== id) {
+      const err = new Error('EMAIL_EXISTS');
+      err.status = 409;
+      throw err;
+    }
+    data.email = email;
+  }
+  if (password) {
+    data.passwordHash = await bcrypt.hash(password, 10);
+  }
+
+  const u = await prisma.user.update({
+    where: { id },
+    data,
+    select: { id: true, fullName: true, email: true, role: true, phone: true },
+  });
+  return {
+    id: u.id,
+    full_name: u.fullName,
+    email: u.email,
+    role: u.role,
+    phone: u.phone,
+  };
+}
+
+module.exports = { findByEmail, findById, createUser, verifyPassword, updateProfile };

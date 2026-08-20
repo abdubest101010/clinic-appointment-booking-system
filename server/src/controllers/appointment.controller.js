@@ -35,7 +35,7 @@ const listAppointments = asyncHandler(async (req, res) => {
   if (req.user.role === 'admin') {
     appointments = await appointmentService.listAllAppointments();
   } else if (req.user.role === 'doctor') {
-    const doctor = await appointmentService.findDoctorByUserId(req.user.id);
+    const doctor = await doctorService.findDoctorByUserId(req.user.id);
     if (!doctor) return error(res, 404, 'Doctor profile not found.');
     appointments = await appointmentService.listAppointmentsForDoctor(doctor.id);
   } else {
@@ -53,7 +53,7 @@ const updateStatus = asyncHandler(async (req, res) => {
   if (!appointment) return error(res, 404, 'Appointment not found.');
 
   if (req.user.role === 'doctor') {
-    const doctor = await appointmentService.findDoctorByUserId(req.user.id);
+    const doctor = await doctorService.findDoctorByUserId(req.user.id);
     if (!doctor || doctor.id !== appointment.doctor_id) {
       return error(res, 403, 'You can only update your own appointments.');
     }
@@ -76,7 +76,7 @@ const cancelAppointment = asyncHandler(async (req, res) => {
     return error(res, 403, 'You can only cancel your own appointments.');
   }
   if (req.user.role === 'doctor') {
-    const doctor = await appointmentService.findDoctorByUserId(req.user.id);
+    const doctor = await doctorService.findDoctorByUserId(req.user.id);
     if (!doctor || doctor.id !== appointment.doctor_id) {
       return error(res, 403, 'You can only cancel your own appointments.');
     }

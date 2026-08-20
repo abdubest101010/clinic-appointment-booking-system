@@ -39,6 +39,9 @@ export default function Navbar() {
                 Admin
               </button>
             )}
+            <button onClick={() => router.push('/profile')} className="text-slate-600 hover:text-brand-700">
+              Profile
+            </button>
             <button onClick={handleLogout} className="btn-outline">
               Logout
             </button>

@@ -47,4 +47,18 @@ const me = asyncHandler(async (req, res) => {
   return ok(res, user);
 });
 
-module.exports = { register, login, me };
+// Update the logged-in user's own profile (name/email/phone/password).
+const updateMe = asyncHandler(async (req, res) => {
+  const { full_name, email, phone, password } = req.body;
+  try {
+    const user = await authService.updateProfile(req.user.id, { full_name, email, phone, password });
+    return ok(res, user, 'Profile updated.');
+  } catch (err) {
+    if (err.message === 'EMAIL_EXISTS') {
+      return error(res, 409, 'That email is already in use.');
+    }
+    throw err;
+  }
+});
+
+module.exports = { register, login, me, updateMe };

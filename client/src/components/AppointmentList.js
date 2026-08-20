@@ -5,13 +5,18 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { StatusBadge, Spinner, Alert, EmptyState } from '@/components/Feedback';
 
-// Fetches the current user's appointments and renders them with role-aware actions.
+const FILTERS = ['all', 'pending', 'confirmed', 'completed', 'cancelled'];
+
+// Fetches the current user's appointments and renders them with role-aware
+// actions, a status filter, and soonest-appointment-first sorting (near today
+// appears at the top).
 export default function AppointmentList({ refreshKey = 0 }) {
   const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionError, setActionError] = useState('');
+  const [filter, setFilter] = useState('all');
 
   async function load() {
     setLoading(true);
@@ -43,13 +48,41 @@ export default function AppointmentList({ refreshKey = 0 }) {
 
   if (loading) return <Spinner label="Loading appointments…" />;
   if (error) return <Alert message={error} />;
+
+  // Filter by status, then sort soonest-first (closest to today at the top).
+  const visible = items
+    .filter((a) => filter === 'all' || a.status === filter)
+    .slice()
+    .sort((a, b) => new Date(a.appointment_at) - new Date(b.appointment_at));
+
   if (!items.length)
     return <EmptyState title="No appointments yet" message="Book one to get started." />;
 
   return (
     <div className="space-y-3">
       {actionError && <Alert message={actionError} />}
-      {items.map((a) => (
+
+      <div className="flex flex-wrap gap-2">
+        {FILTERS.map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={
+              filter === f
+                ? 'btn'
+                : 'btn-outline'
+            }
+          >
+            {f === 'all' ? 'All' : f[0].toUpperCase() + f.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {visible.length === 0 && (
+        <EmptyState title="No appointments match this filter" />
+      )}
+
+      {visible.map((a) => (
         <div key={a.id} className="card">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>

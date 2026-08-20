@@ -154,6 +154,7 @@ Base URL: `http://localhost:4000/api`
 | POST | `/auth/register` | — | Register (defaults to patient) |
 | POST | `/auth/login` | — | Login → returns JWT + user |
 | GET  | `/auth/me` | user | Current user profile |
+| PATCH| `/auth/me` | user | Update own profile (name/email/phone/password) |
 | GET  | `/doctors` | user | List active doctors |
 | POST | `/doctors` | admin | Register a new doctor (creates login + profile) |
 | POST | `/appointments` | patient | Book appointment |
